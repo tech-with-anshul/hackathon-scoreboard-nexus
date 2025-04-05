@@ -9,13 +9,123 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      evaluations: {
+        Row: {
+          completion: number
+          created_at: string
+          id: string
+          impact: number
+          innovation: number
+          judge_id: string
+          notes: string | null
+          presentation: number
+          team_id: string
+          technical: number
+          total_score: number
+          updated_at: string
+        }
+        Insert: {
+          completion: number
+          created_at?: string
+          id?: string
+          impact: number
+          innovation: number
+          judge_id: string
+          notes?: string | null
+          presentation: number
+          team_id: string
+          technical: number
+          total_score: number
+          updated_at?: string
+        }
+        Update: {
+          completion?: number
+          created_at?: string
+          id?: string
+          impact?: number
+          innovation?: number
+          judge_id?: string
+          notes?: string | null
+          presentation?: number
+          team_id?: string
+          technical?: number
+          total_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_judge_id_fkey"
+            columns: ["judge_id"]
+            isOneToOne: false
+            referencedRelation: "judges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      judges: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          institution: string | null
+          members: string[]
+          name: string
+          project: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          institution?: string | null
+          members: string[]
+          name: string
+          project: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          institution?: string | null
+          members?: string[]
+          name?: string
+          project?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_types: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

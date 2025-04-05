@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Types
 export interface Judge {
@@ -112,35 +113,86 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Load initial data
   useEffect(() => {
-    // In a real app, this would fetch from an API
-    const loadInitialData = () => {
+    const loadInitialData = async () => {
       try {
-        // Load from localStorage or use mock data
-        const storedTeams = localStorage.getItem('hackathon_teams');
-        const storedJudges = localStorage.getItem('hackathon_judges');
-        const storedEvaluations = localStorage.getItem('hackathon_evaluations');
-
-        if (storedTeams) {
-          setTeams(JSON.parse(storedTeams));
+        setLoading(true);
+        
+        // Fetch teams from Supabase
+        const { data: teamsData, error: teamsError } = await supabase
+          .from('teams')
+          .select('*');
+          
+        if (teamsError) throw teamsError;
+        
+        if (teamsData && teamsData.length > 0) {
+          // Map Supabase data to our Team interface
+          const mappedTeams: Team[] = teamsData.map(team => ({
+            id: team.id,
+            name: team.name,
+            members: team.members,
+            project: team.project,
+            institution: team.institution || undefined
+          }));
+          setTeams(mappedTeams);
         } else {
+          // If no teams in DB, use mock data
           setTeams(MOCK_TEAMS);
-          localStorage.setItem('hackathon_teams', JSON.stringify(MOCK_TEAMS));
+          
+          // Insert mock teams into Supabase
+          for (const team of MOCK_TEAMS) {
+            await supabase.from('teams').insert({
+              id: team.id,
+              name: team.name,
+              members: team.members,
+              project: team.project,
+              institution: team.institution
+            });
+          }
         }
-
-        if (storedJudges) {
-          setJudges(JSON.parse(storedJudges));
-        } else {
-          // Get judges from auth context mock
-          const mockJudges: Judge[] = [];
-          localStorage.setItem('hackathon_judges', JSON.stringify(mockJudges));
+        
+        // Fetch judges from Supabase
+        const { data: judgesData, error: judgesError } = await supabase
+          .from('judges')
+          .select('*');
+          
+        if (judgesError) throw judgesError;
+        
+        if (judgesData) {
+          // Map Supabase data to our Judge interface
+          const mappedJudges: Judge[] = judgesData.map(judge => ({
+            id: judge.id,
+            name: judge.name,
+            email: judge.email
+          }));
+          setJudges(mappedJudges);
         }
-
-        if (storedEvaluations) {
-          setEvaluations(JSON.parse(storedEvaluations));
-        } else {
-          localStorage.setItem('hackathon_evaluations', JSON.stringify([]));
+        
+        // Fetch evaluations from Supabase
+        const { data: evaluationsData, error: evaluationsError } = await supabase
+          .from('evaluations')
+          .select('*');
+          
+        if (evaluationsError) throw evaluationsError;
+        
+        if (evaluationsData) {
+          // Map Supabase data to our Evaluation interface
+          const mappedEvaluations: Evaluation[] = evaluationsData.map(eval => ({
+            id: eval.id,
+            teamId: eval.team_id,
+            judgeId: eval.judge_id,
+            criteria: {
+              innovation: eval.innovation,
+              technical: eval.technical,
+              presentation: eval.presentation,
+              impact: eval.impact,
+              completion: eval.completion
+            },
+            totalScore: eval.total_score,
+            notes: eval.notes || undefined,
+            timestamp: eval.updated_at
+          }));
+          setEvaluations(mappedEvaluations);
         }
-
       } catch (error) {
         console.error('Error loading initial data:', error);
         toast.error('Failed to load hackathon data');
@@ -152,112 +204,279 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     loadInitialData();
   }, []);
 
-  // Save data to localStorage whenever it changes
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('hackathon_teams', JSON.stringify(teams));
-    }
-  }, [teams, loading]);
-
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('hackathon_judges', JSON.stringify(judges));
-    }
-  }, [judges, loading]);
-
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('hackathon_evaluations', JSON.stringify(evaluations));
-    }
-  }, [evaluations, loading]);
-
   // Admin functions
-  const addTeam = (team: Omit<Team, 'id'>) => {
-    const newTeam = { ...team, id: `team_${Date.now()}` };
-    setTeams([...teams, newTeam]);
-    toast.success(`Team "${team.name}" added successfully`);
+  const addTeam = async (team: Omit<Team, 'id'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .insert({
+          name: team.name,
+          members: team.members,
+          project: team.project,
+          institution: team.institution || null
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      if (data) {
+        const newTeam: Team = {
+          id: data.id,
+          name: data.name,
+          members: data.members,
+          project: data.project,
+          institution: data.institution || undefined
+        };
+        setTeams([...teams, newTeam]);
+        toast.success(`Team "${team.name}" added successfully`);
+      }
+    } catch (error) {
+      console.error('Error adding team:', error);
+      toast.error('Failed to add team');
+    }
   };
 
-  const removeTeam = (id: string) => {
-    setTeams(teams.filter((team) => team.id !== id));
-    // Also remove all evaluations for this team
-    setEvaluations(evaluations.filter((assessment) => assessment.teamId !== id));
-    toast.success('Team removed successfully');
+  const removeTeam = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('teams')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      setTeams(teams.filter((team) => team.id !== id));
+      // Evaluations will be cascade deleted due to foreign key constraint
+      setEvaluations(evaluations.filter((assessment) => assessment.teamId !== id));
+      toast.success('Team removed successfully');
+    } catch (error) {
+      console.error('Error removing team:', error);
+      toast.error('Failed to remove team');
+    }
   };
 
-  const addJudge = (judge: Omit<Judge, 'id'>) => {
-    const newJudge = { ...judge, id: `judge_${Date.now()}` };
-    setJudges([...judges, newJudge]);
-    toast.success(`Judge "${judge.name}" added successfully`);
+  const addJudge = async (judge: Omit<Judge, 'id'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('judges')
+        .insert({
+          name: judge.name,
+          email: judge.email
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      if (data) {
+        const newJudge: Judge = {
+          id: data.id,
+          name: data.name,
+          email: data.email
+        };
+        setJudges([...judges, newJudge]);
+        toast.success(`Judge "${judge.name}" added successfully`);
+      }
+    } catch (error) {
+      console.error('Error adding judge:', error);
+      toast.error('Failed to add judge');
+    }
   };
 
-  const removeJudge = (id: string) => {
-    setJudges(judges.filter((judge) => judge.id !== id));
-    // Also remove all evaluations by this judge
-    setEvaluations(evaluations.filter((assessment) => assessment.judgeId !== id));
-    toast.success('Judge removed successfully');
+  const removeJudge = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('judges')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      setJudges(judges.filter((judge) => judge.id !== id));
+      // Evaluations will be cascade deleted due to foreign key constraint
+      setEvaluations(evaluations.filter((assessment) => assessment.judgeId !== id));
+      toast.success('Judge removed successfully');
+    } catch (error) {
+      console.error('Error removing judge:', error);
+      toast.error('Failed to remove judge');
+    }
   };
 
-  const uploadTeams = (teamsData: Omit<Team, 'id'>[]) => {
-    const newTeams = teamsData.map((team) => ({
-      ...team,
-      id: `team_${Date.now()}_${Math.floor(Math.random() * 1000)}`
-    }));
-    setTeams([...teams, ...newTeams]);
-    toast.success(`${newTeams.length} teams uploaded successfully`);
+  const uploadTeams = async (teamsData: Omit<Team, 'id'>[]) => {
+    try {
+      const teamsToInsert = teamsData.map(team => ({
+        name: team.name,
+        members: team.members,
+        project: team.project,
+        institution: team.institution || null
+      }));
+      
+      const { data, error } = await supabase
+        .from('teams')
+        .insert(teamsToInsert)
+        .select();
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const newTeams: Team[] = data.map(team => ({
+          id: team.id,
+          name: team.name,
+          members: team.members,
+          project: team.project,
+          institution: team.institution || undefined
+        }));
+        setTeams([...teams, ...newTeams]);
+        toast.success(`${newTeams.length} teams uploaded successfully`);
+      }
+    } catch (error) {
+      console.error('Error uploading teams:', error);
+      toast.error('Failed to upload teams');
+    }
   };
 
-  const uploadJudges = (judgesData: Omit<Judge, 'id'>[]) => {
-    const newJudges = judgesData.map((judge) => ({
-      ...judge,
-      id: `judge_${Date.now()}_${Math.floor(Math.random() * 1000)}`
-    }));
-    setJudges([...judges, ...newJudges]);
-    toast.success(`${newJudges.length} judges uploaded successfully`);
+  const uploadJudges = async (judgesData: Omit<Judge, 'id'>[]) => {
+    try {
+      const judgesToInsert = judgesData.map(judge => ({
+        name: judge.name,
+        email: judge.email
+      }));
+      
+      const { data, error } = await supabase
+        .from('judges')
+        .insert(judgesToInsert)
+        .select();
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const newJudges: Judge[] = data.map(judge => ({
+          id: judge.id,
+          name: judge.name,
+          email: judge.email
+        }));
+        setJudges([...judges, ...newJudges]);
+        toast.success(`${newJudges.length} judges uploaded successfully`);
+      }
+    } catch (error) {
+      console.error('Error uploading judges:', error);
+      toast.error('Failed to upload judges');
+    }
   };
 
-  const resetEvaluations = () => {
-    setEvaluations([]);
-    toast.success('All evaluations have been reset');
+  const resetEvaluations = async () => {
+    try {
+      const { error } = await supabase
+        .from('evaluations')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all evaluations
+        
+      if (error) throw error;
+      
+      setEvaluations([]);
+      toast.success('All evaluations have been reset');
+    } catch (error) {
+      console.error('Error resetting evaluations:', error);
+      toast.error('Failed to reset evaluations');
+    }
   };
 
   // Judge functions
-  const submitEvaluation = (evaluation: Omit<Evaluation, 'id' | 'timestamp'>) => {
-    // Calculate total score
-    const { criteria } = evaluation;
-    const totalScore = 
-      criteria.innovation + 
-      criteria.technical + 
-      criteria.presentation + 
-      criteria.impact + 
-      criteria.completion;
+  const submitEvaluation = async (evaluation: Omit<Evaluation, 'id' | 'timestamp'>) => {
+    try {
+      // Calculate total score
+      const { criteria } = evaluation;
+      const totalScore = 
+        criteria.innovation + 
+        criteria.technical + 
+        criteria.presentation + 
+        criteria.impact + 
+        criteria.completion;
 
-    // Check if this judge has already evaluated this team
-    const existingEvalIndex = evaluations.findIndex(
-      (assessment) => assessment.teamId === evaluation.teamId && assessment.judgeId === evaluation.judgeId
-    );
+      // Check if this judge has already evaluated this team
+      const existingEval = evaluations.find(
+        (assessment) => assessment.teamId === evaluation.teamId && assessment.judgeId === evaluation.judgeId
+      );
 
-    if (existingEvalIndex !== -1) {
-      // Update existing evaluation
-      const updatedEvaluations = [...evaluations];
-      updatedEvaluations[existingEvalIndex] = {
-        ...updatedEvaluations[existingEvalIndex],
-        ...evaluation,
-        totalScore,
-        timestamp: new Date().toISOString()
-      };
-      setEvaluations(updatedEvaluations);
-      toast.success('Evaluation updated successfully');
-    } else {
-      // Create new evaluation
-      const newEvaluation: Evaluation = {
-        id: `eval_${Date.now()}`,
-        ...evaluation,
-        totalScore,
-        timestamp: new Date().toISOString()
-      };
-      setEvaluations([...evaluations, newEvaluation]);
-      toast.success('Evaluation submitted successfully');
+      if (existingEval) {
+        // Update existing evaluation
+        const { error } = await supabase
+          .from('evaluations')
+          .update({
+            innovation: criteria.innovation,
+            technical: criteria.technical,
+            presentation: criteria.presentation,
+            impact: criteria.impact,
+            completion: criteria.completion,
+            total_score: totalScore,
+            notes: evaluation.notes || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingEval.id);
+          
+        if (error) throw error;
+        
+        // Update local state
+        const updatedEvaluations = evaluations.map(eval => {
+          if (eval.id === existingEval.id) {
+            return {
+              ...eval,
+              criteria,
+              totalScore,
+              notes: evaluation.notes,
+              timestamp: new Date().toISOString()
+            };
+          }
+          return eval;
+        });
+        
+        setEvaluations(updatedEvaluations);
+        toast.success('Evaluation updated successfully');
+      } else {
+        // Create new evaluation
+        const { data, error } = await supabase
+          .from('evaluations')
+          .insert({
+            team_id: evaluation.teamId,
+            judge_id: evaluation.judgeId,
+            innovation: criteria.innovation,
+            technical: criteria.technical,
+            presentation: criteria.presentation,
+            impact: criteria.impact,
+            completion: criteria.completion,
+            total_score: totalScore,
+            notes: evaluation.notes || null
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          const newEvaluation: Evaluation = {
+            id: data.id,
+            teamId: data.team_id,
+            judgeId: data.judge_id,
+            criteria: {
+              innovation: data.innovation,
+              technical: data.technical,
+              presentation: data.presentation,
+              impact: data.impact,
+              completion: data.completion
+            },
+            totalScore: data.total_score,
+            notes: data.notes || undefined,
+            timestamp: data.created_at
+          };
+          
+          setEvaluations([...evaluations, newEvaluation]);
+          toast.success('Evaluation submitted successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting evaluation:', error);
+      toast.error('Failed to submit evaluation');
     }
   };
 
