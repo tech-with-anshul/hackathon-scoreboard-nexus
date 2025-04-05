@@ -1,4 +1,5 @@
 
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,44 +17,49 @@ import Results from "./pages/Results";
 import Evaluate from "./pages/Evaluate";
 import NotFound from "./pages/NotFound";
 
+// Create a client
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AuthProvider>
-        <HackathonProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Login />} />
-              
-              {/* Dashboard and shared routes */}
-              <Route element={<DashboardLayout />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-              </Route>
-              
-              {/* Admin routes */}
-              <Route element={<DashboardLayout requiredRole="admin" />}>
-                <Route path="/teams" element={<Teams />} />
-                <Route path="/judges" element={<Judges />} />
-                <Route path="/import" element={<Import />} />
-                <Route path="/results" element={<Results />} />
-              </Route>
-              
-              {/* Judge routes */}
-              <Route element={<DashboardLayout requiredRole="judge" />}>
-                <Route path="/evaluate" element={<Evaluate />} />
-              </Route>
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </HackathonProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  return (
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <AuthProvider>
+            <HackathonProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Login />} />
+                  
+                  {/* Dashboard and shared routes */}
+                  <Route element={<DashboardLayout />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                  </Route>
+                  
+                  {/* Admin routes */}
+                  <Route element={<DashboardLayout requiredRole="admin" />}>
+                    <Route path="/teams" element={<Teams />} />
+                    <Route path="/judges" element={<Judges />} />
+                    <Route path="/import" element={<Import />} />
+                    <Route path="/results" element={<Results />} />
+                  </Route>
+                  
+                  {/* Judge routes */}
+                  <Route element={<DashboardLayout requiredRole="judge" />}>
+                    <Route path="/evaluate" element={<Evaluate />} />
+                  </Route>
+                  
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </HackathonProvider>
+          </AuthProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </React.StrictMode>
+  );
+};
 
 export default App;
