@@ -2,9 +2,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
@@ -116,7 +113,8 @@ const Evaluate = () => {
           teams={teams} 
           selectedTeam={selectedTeam} 
           evaluatedTeamIds={evaluatedTeamIds} 
-          onTeamSelect={handleTeamSelect} 
+          onTeamSelect={handleTeamSelect}
+          connectionError={connectionError}
         />
         
         <div>
