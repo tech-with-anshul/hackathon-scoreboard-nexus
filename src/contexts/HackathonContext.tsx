@@ -46,6 +46,7 @@ interface HackathonContextType {
   judges: Judge[];
   evaluations: Evaluation[];
   loading: boolean;
+  connectionError: boolean;
   // Admin functions
   addTeam: (team: Omit<Team, 'id'>) => void;
   removeTeam: (id: string) => void;
@@ -110,12 +111,35 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [judges, setJudges] = useState<Judge[]>([]);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [connectionError, setConnectionError] = useState<boolean>(false);
 
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         setLoading(true);
+        
+        // Test connection to Supabase
+        try {
+          const { error: pingError } = await supabase.from('teams').select('id').limit(1);
+          if (pingError) {
+            console.error('Supabase connection error:', pingError);
+            setConnectionError(true);
+            // Fall back to mock data if can't connect to Supabase
+            setTeams(MOCK_TEAMS);
+            setLoading(false);
+            return;
+          } else {
+            setConnectionError(false);
+          }
+        } catch (connectionError) {
+          console.error('Error connecting to Supabase:', connectionError);
+          setConnectionError(true);
+          // Fall back to mock data if can't connect to Supabase
+          setTeams(MOCK_TEAMS);
+          setLoading(false);
+          return;
+        }
         
         // Fetch teams from Supabase
         const { data: teamsData, error: teamsError } = await supabase
@@ -196,7 +220,10 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       } catch (error) {
         console.error('Error loading initial data:', error);
+        setConnectionError(true);
         toast.error('Failed to load hackathon data');
+        // Fall back to mock data
+        setTeams(MOCK_TEAMS);
       } finally {
         setLoading(false);
       }
@@ -395,12 +422,53 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         criteria.impact + 
         criteria.completion;
 
-      // Check if this judge has already evaluated this team
-      const existingEval = evaluations.find(
+      // Generate a temporary ID for offline mode
+      const tempId = crypto.randomUUID?.() || Date.now().toString();
+      const timestamp = new Date().toISOString();
+
+      // Check if we have a connection error or if this judge has already evaluated this team
+      const existingEvaluation = evaluations.find(
         (assessment) => assessment.teamId === evaluation.teamId && assessment.judgeId === evaluation.judgeId
       );
 
-      if (existingEval) {
+      if (connectionError) {
+        // Handle offline mode - just update local state
+        if (existingEvaluation) {
+          // Update existing evaluation in local state
+          const updatedEvaluations = evaluations.map(item => {
+            if (item.id === existingEvaluation.id) {
+              return {
+                ...item,
+                criteria,
+                totalScore,
+                notes: evaluation.notes,
+                timestamp
+              };
+            }
+            return item;
+          });
+          
+          setEvaluations(updatedEvaluations);
+        } else {
+          // Create new evaluation in local state
+          const newEvaluation: Evaluation = {
+            id: tempId,
+            teamId: evaluation.teamId,
+            judgeId: evaluation.judgeId,
+            criteria,
+            totalScore,
+            notes: evaluation.notes,
+            timestamp
+          };
+          
+          setEvaluations([...evaluations, newEvaluation]);
+        }
+        
+        toast.success('Evaluation saved locally (offline mode)');
+        return;
+      }
+
+      if (existingEvaluation) {
         // Update existing evaluation
         const { error } = await supabase
           .from('evaluations')
@@ -412,22 +480,25 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             completion: criteria.completion,
             total_score: totalScore,
             notes: evaluation.notes || null,
-            updated_at: new Date().toISOString()
+            updated_at: timestamp
           })
-          .eq('id', existingEval.id);
+          .eq('id', existingEvaluation.id);
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating evaluation:', error);
+          toast.error('Failed to update evaluation');
+          return;
+        }
         
         // Update local state
-        // Fixed: renamed 'eval' to 'item' to avoid using reserved keyword
         const updatedEvaluations = evaluations.map(item => {
-          if (item.id === existingEval.id) {
+          if (item.id === existingEvaluation.id) {
             return {
               ...item,
               criteria,
               totalScore,
               notes: evaluation.notes,
-              timestamp: new Date().toISOString()
+              timestamp
             };
           }
           return item;
@@ -453,7 +524,11 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           .select()
           .single();
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating evaluation:', error);
+          toast.error('Failed to submit evaluation');
+          return;
+        }
         
         if (data) {
           const newEvaluation: Evaluation = {
@@ -528,6 +603,7 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     judges,
     evaluations,
     loading,
+    connectionError,
     addTeam,
     removeTeam,
     addJudge,

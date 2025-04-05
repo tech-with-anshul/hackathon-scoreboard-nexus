@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useHackathon } from '@/contexts/HackathonContext';
 import { toast } from 'sonner';
 
 const Evaluate = () => {
   const { user } = useAuth();
-  const { teams, submitEvaluation, getJudgeEvaluations } = useHackathon();
+  const { teams, submitEvaluation, getJudgeEvaluations, connectionError } = useHackathon();
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [criteria, setCriteria] = useState({
     innovation: 10,
@@ -88,6 +90,16 @@ const Evaluate = () => {
           Select a team to evaluate or update your evaluation.
         </p>
       </div>
+      
+      {connectionError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Connection Error</AlertTitle>
+          <AlertDescription>
+            Unable to connect to the server. Your evaluations will be saved locally.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <div className="grid gap-6 md:grid-cols-2">
         <div>
