@@ -164,13 +164,20 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           
           // Insert mock teams into Supabase
           for (const team of MOCK_TEAMS) {
-            await supabase.from('teams').insert({
-              id: team.id,
-              name: team.name,
-              members: team.members,
-              project: team.project,
-              institution: team.institution
-            });
+            // Create a new team object without the 'id' field
+            // as Supabase will generate UUID automatically
+            const { name, members, project, institution } = team;
+            
+            try {
+              await supabase.from('teams').insert({
+                name,
+                members,
+                project,
+                institution
+              });
+            } catch (insertError) {
+              console.error('Error inserting team:', insertError);
+            }
           }
         }
         
