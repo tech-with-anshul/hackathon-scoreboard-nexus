@@ -176,20 +176,21 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         
         if (evaluationsData) {
           // Map Supabase data to our Evaluation interface
-          const mappedEvaluations: Evaluation[] = evaluationsData.map(eval => ({
-            id: eval.id,
-            teamId: eval.team_id,
-            judgeId: eval.judge_id,
+          // Fixed: renamed 'eval' to 'evaluation' to avoid using reserved keyword
+          const mappedEvaluations: Evaluation[] = evaluationsData.map(evaluation => ({
+            id: evaluation.id,
+            teamId: evaluation.team_id,
+            judgeId: evaluation.judge_id,
             criteria: {
-              innovation: eval.innovation,
-              technical: eval.technical,
-              presentation: eval.presentation,
-              impact: eval.impact,
-              completion: eval.completion
+              innovation: evaluation.innovation,
+              technical: evaluation.technical,
+              presentation: evaluation.presentation,
+              impact: evaluation.impact,
+              completion: evaluation.completion
             },
-            totalScore: eval.total_score,
-            notes: eval.notes || undefined,
-            timestamp: eval.updated_at
+            totalScore: evaluation.total_score,
+            notes: evaluation.notes || undefined,
+            timestamp: evaluation.updated_at
           }));
           setEvaluations(mappedEvaluations);
         }
@@ -418,17 +419,18 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (error) throw error;
         
         // Update local state
-        const updatedEvaluations = evaluations.map(eval => {
-          if (eval.id === existingEval.id) {
+        // Fixed: renamed 'eval' to 'item' to avoid using reserved keyword
+        const updatedEvaluations = evaluations.map(item => {
+          if (item.id === existingEval.id) {
             return {
-              ...eval,
+              ...item,
               criteria,
               totalScore,
               notes: evaluation.notes,
               timestamp: new Date().toISOString()
             };
           }
-          return eval;
+          return item;
         });
         
         setEvaluations(updatedEvaluations);
