@@ -26,17 +26,17 @@ const Evaluate = () => {
   const judgeEvaluations = getJudgeEvaluations(judgeId);
   
   // Get teams that have already been evaluated
-  const evaluatedTeamIds = new Set(judgeEvaluations.map(eval => eval.teamId));
+  const evaluatedTeamIds = new Set(judgeEvaluations.map(assessment => assessment.teamId));
 
   const handleTeamSelect = (teamId: string) => {
     setSelectedTeam(teamId);
     
     // Check if team has been evaluated and pre-fill the form
-    const existingEval = judgeEvaluations.find(eval => eval.teamId === teamId);
+    const existingAssessment = judgeEvaluations.find(assessment => assessment.teamId === teamId);
     
-    if (existingEval) {
-      setCriteria(existingEval.criteria);
-      setNotes(existingEval.notes || '');
+    if (existingAssessment) {
+      setCriteria(existingAssessment.criteria);
+      setNotes(existingAssessment.notes || '');
     } else {
       // Reset to default values
       setCriteria({

@@ -181,7 +181,7 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const removeTeam = (id: string) => {
     setTeams(teams.filter((team) => team.id !== id));
     // Also remove all evaluations for this team
-    setEvaluations(evaluations.filter((eval) => eval.teamId !== id));
+    setEvaluations(evaluations.filter((assessment) => assessment.teamId !== id));
     toast.success('Team removed successfully');
   };
 
@@ -194,7 +194,7 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const removeJudge = (id: string) => {
     setJudges(judges.filter((judge) => judge.id !== id));
     // Also remove all evaluations by this judge
-    setEvaluations(evaluations.filter((eval) => eval.judgeId !== id));
+    setEvaluations(evaluations.filter((assessment) => assessment.judgeId !== id));
     toast.success('Judge removed successfully');
   };
 
@@ -234,7 +234,7 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     // Check if this judge has already evaluated this team
     const existingEvalIndex = evaluations.findIndex(
-      (eval) => eval.teamId === evaluation.teamId && eval.judgeId === evaluation.judgeId
+      (assessment) => assessment.teamId === evaluation.teamId && assessment.judgeId === evaluation.judgeId
     );
 
     if (existingEvalIndex !== -1) {
@@ -262,14 +262,14 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const getJudgeEvaluations = (judgeId: string) => {
-    return evaluations.filter((eval) => eval.judgeId === judgeId);
+    return evaluations.filter((assessment) => assessment.judgeId === judgeId);
   };
 
   // Results
   const getTeamResults = (): TeamResult[] => {
     return teams.map((team) => {
-      const teamEvaluations = evaluations.filter((eval) => eval.teamId === team.id);
-      const totalScore = teamEvaluations.reduce((sum, eval) => sum + eval.totalScore, 0);
+      const teamEvaluations = evaluations.filter((assessment) => assessment.teamId === team.id);
+      const totalScore = teamEvaluations.reduce((sum, assessment) => sum + assessment.totalScore, 0);
       const averageScore = teamEvaluations.length > 0 
         ? totalScore / teamEvaluations.length 
         : 0;
@@ -287,8 +287,8 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const team = teams.find((t) => t.id === teamId);
     if (!team) return undefined;
 
-    const teamEvaluations = evaluations.filter((eval) => eval.teamId === teamId);
-    const totalScore = teamEvaluations.reduce((sum, eval) => sum + eval.totalScore, 0);
+    const teamEvaluations = evaluations.filter((assessment) => assessment.teamId === teamId);
+    const totalScore = teamEvaluations.reduce((sum, assessment) => sum + assessment.totalScore, 0);
     const averageScore = teamEvaluations.length > 0 
       ? totalScore / teamEvaluations.length 
       : 0;
