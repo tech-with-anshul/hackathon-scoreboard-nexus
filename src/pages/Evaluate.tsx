@@ -10,6 +10,8 @@ import { AlertCircle } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useHackathon } from '@/contexts/HackathonContext';
 import { toast } from 'sonner';
+import TeamList from '@/components/evaluation/TeamList';
+import EvaluationForm from '@/components/evaluation/EvaluationForm';
 
 const Evaluate = () => {
   const { user } = useAuth();
@@ -23,6 +25,7 @@ const Evaluate = () => {
     completion: 10
   });
   const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const judgeId = user?.id || '';
   const judgeEvaluations = getJudgeEvaluations(judgeId);
@@ -52,7 +55,7 @@ const Evaluate = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedTeam || !user) {
@@ -60,27 +63,34 @@ const Evaluate = () => {
       return;
     }
     
-    submitEvaluation({
-      teamId: selectedTeam,
-      judgeId: user.id,
-      criteria,
-      totalScore: Object.values(criteria).reduce((sum, score) => sum + score, 0),
-      notes
-    });
-    
-    // Reset form
-    setSelectedTeam(null);
-    setCriteria({
-      innovation: 10,
-      technical: 10,
-      presentation: 10,
-      impact: 10,
-      completion: 10
-    });
-    setNotes('');
+    try {
+      setIsSubmitting(true);
+      
+      await submitEvaluation({
+        teamId: selectedTeam,
+        judgeId: user.id,
+        criteria,
+        totalScore: Object.values(criteria).reduce((sum, score) => sum + score, 0),
+        notes
+      });
+      
+      // Reset form only on successful submission
+      setSelectedTeam(null);
+      setCriteria({
+        innovation: 10,
+        technical: 10,
+        presentation: 10,
+        impact: 10,
+        completion: 10
+      });
+      setNotes('');
+    } catch (error) {
+      console.error('Submission error:', error);
+      // Error is already handled by the submitEvaluation function which shows toast
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  const totalScore = Object.values(criteria).reduce((sum, score) => sum + score, 0);
 
   return (
     <div className="space-y-6">
@@ -102,142 +112,24 @@ const Evaluate = () => {
       )}
       
       <div className="grid gap-6 md:grid-cols-2">
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Team List</h2>
-          
-          <div className="grid gap-3">
-            {teams.map((team) => (
-              <Button
-                key={team.id}
-                variant={selectedTeam === team.id ? "default" : "outline"}
-                className={`justify-start h-auto py-3 ${
-                  selectedTeam === team.id ? "bg-hackathon-blue text-white" : ""
-                }`}
-                onClick={() => handleTeamSelect(team.id)}
-              >
-                <div className="flex flex-col items-start text-left">
-                  <div className="flex items-center w-full justify-between">
-                    <span className="font-medium">{team.name}</span>
-                    {evaluatedTeamIds.has(team.id) && (
-                      <Badge variant="outline" className="ml-2 bg-green-100 text-green-800 border-green-200">
-                        Evaluated
-                      </Badge>
-                    )}
-                  </div>
-                  <span className="text-xs opacity-70 mt-1">{team.project}</span>
-                </div>
-              </Button>
-            ))}
-          </div>
-        </div>
+        <TeamList 
+          teams={teams} 
+          selectedTeam={selectedTeam} 
+          evaluatedTeamIds={evaluatedTeamIds} 
+          onTeamSelect={handleTeamSelect} 
+        />
         
         <div>
           {selectedTeam ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Evaluation Form</CardTitle>
-                <CardDescription>
-                  Rate the team on each criteria (0-20 points each)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form id="evaluationForm" onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <label className="text-sm font-medium">Innovation & Creativity</label>
-                        <span className="text-sm font-semibold">{criteria.innovation}/20</span>
-                      </div>
-                      <Slider 
-                        value={[criteria.innovation]} 
-                        min={0} 
-                        max={20} 
-                        step={1}
-                        onValueChange={(value) => setCriteria({...criteria, innovation: value[0]})}
-                      />
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <label className="text-sm font-medium">Technical Complexity</label>
-                        <span className="text-sm font-semibold">{criteria.technical}/20</span>
-                      </div>
-                      <Slider 
-                        value={[criteria.technical]} 
-                        min={0} 
-                        max={20} 
-                        step={1}
-                        onValueChange={(value) => setCriteria({...criteria, technical: value[0]})}
-                      />
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <label className="text-sm font-medium">Presentation & Demo</label>
-                        <span className="text-sm font-semibold">{criteria.presentation}/20</span>
-                      </div>
-                      <Slider 
-                        value={[criteria.presentation]} 
-                        min={0} 
-                        max={20} 
-                        step={1}
-                        onValueChange={(value) => setCriteria({...criteria, presentation: value[0]})}
-                      />
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <label className="text-sm font-medium">Impact & Usefulness</label>
-                        <span className="text-sm font-semibold">{criteria.impact}/20</span>
-                      </div>
-                      <Slider 
-                        value={[criteria.impact]} 
-                        min={0} 
-                        max={20} 
-                        step={1}
-                        onValueChange={(value) => setCriteria({...criteria, impact: value[0]})}
-                      />
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <label className="text-sm font-medium">Completion & Polish</label>
-                        <span className="text-sm font-semibold">{criteria.completion}/20</span>
-                      </div>
-                      <Slider 
-                        value={[criteria.completion]} 
-                        min={0} 
-                        max={20} 
-                        step={1}
-                        onValueChange={(value) => setCriteria({...criteria, completion: value[0]})}
-                      />
-                    </div>
-                    
-                    <div className="pt-2">
-                      <label className="text-sm font-medium block mb-2">Notes (Optional)</label>
-                      <Textarea 
-                        placeholder="Enter any additional notes or feedback..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                </form>
-              </CardContent>
-              <CardFooter className="flex justify-between border-t p-4">
-                <div className="text-xl font-bold">
-                  Total: <span className="text-hackathon-red">{totalScore}/100</span>
-                </div>
-                <Button 
-                  type="submit"
-                  form="evaluationForm"
-                  className="bg-hackathon-blue hover:bg-hackathon-blue/80"
-                >
-                  {evaluatedTeamIds.has(selectedTeam) ? 'Update Evaluation' : 'Submit Evaluation'}
-                </Button>
-              </CardFooter>
-            </Card>
+            <EvaluationForm
+              criteria={criteria}
+              setCriteria={setCriteria}
+              notes={notes}
+              setNotes={setNotes}
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+              isUpdate={evaluatedTeamIds.has(selectedTeam)}
+            />
           ) : (
             <Card>
               <CardHeader>
