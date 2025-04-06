@@ -8,7 +8,7 @@ import { useEvaluations } from '@/hooks/useEvaluations';
 import { useResults } from '@/hooks/useResults';
 import type { Team, Judge, Evaluation, TeamResult, HackathonContextType } from '@/types/hackathon';
 
-// Create the context
+// Create the context with a defined default value
 const HackathonContext = createContext<HackathonContextType | undefined>(undefined);
 
 // Provider component
@@ -100,6 +100,7 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     getTeamResultById
   };
 
+  console.log('HackathonProvider rendering with teams:', teams.length);
   return <HackathonContext.Provider value={value}>{children}</HackathonContext.Provider>;
 };
 

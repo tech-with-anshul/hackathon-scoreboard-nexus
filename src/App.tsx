@@ -27,9 +27,9 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <AuthProvider>
-            <HackathonProvider>
-              <BrowserRouter>
+          <BrowserRouter>
+            <AuthProvider>
+              <HackathonProvider>
                 <Routes>
                   <Route path="/" element={<Login />} />
                   
@@ -53,9 +53,9 @@ const App = () => {
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </BrowserRouter>
-            </HackathonProvider>
-          </AuthProvider>
+              </HackathonProvider>
+            </AuthProvider>
+          </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>
     </React.StrictMode>
