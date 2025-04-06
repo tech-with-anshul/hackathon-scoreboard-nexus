@@ -9,6 +9,7 @@ import { useHackathon } from '@/contexts/HackathonContext';
 import { toast } from 'sonner';
 import TeamList from '@/components/evaluation/TeamList';
 import EvaluationForm from '@/components/evaluation/EvaluationForm';
+import { isValidUUID } from '@/integrations/supabase/client';
 
 const Evaluate = () => {
   const { user } = useAuth();
@@ -62,6 +63,14 @@ const Evaluate = () => {
       return;
     }
     
+    // Validate UUIDs before submission
+    if (!isValidUUID(selectedTeam) || !isValidUUID(user.id)) {
+      const errorMsg = 'Invalid team or user ID format';
+      toast.error(errorMsg);
+      setSubmitError(errorMsg);
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       setSubmitError(null);
@@ -75,6 +84,7 @@ const Evaluate = () => {
       });
       
       // Reset form only on successful submission
+      toast.success('Evaluation submitted successfully');
       setSelectedTeam(null);
       setCriteria({
         innovation: 10,

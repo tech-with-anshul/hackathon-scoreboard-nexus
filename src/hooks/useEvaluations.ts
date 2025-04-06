@@ -61,6 +61,20 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
       const tempId = crypto.randomUUID?.() || `temp-${Date.now()}`;
       const timestamp = new Date().toISOString();
 
+      // Ensure teamId and judgeId are valid UUIDs
+      const teamId = evaluation.teamId;
+      const judgeId = evaluation.judgeId;
+      
+      // Validate that teamId and judgeId are valid UUIDs
+      const isValidUUID = (id: string) => {
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      };
+      
+      if (!isValidUUID(teamId) || !isValidUUID(judgeId)) {
+        toast.error('Invalid team or judge ID format');
+        throw new Error('Invalid UUID format for team or judge ID');
+      }
+
       // Check if this judge has already evaluated this team
       const existingEvaluation = evaluations.find(
         (assessment) => assessment.teamId === evaluation.teamId && assessment.judgeId === evaluation.judgeId
@@ -168,8 +182,8 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         const { data, error } = await supabase
           .from('evaluations')
           .insert({
-            team_id: evaluation.teamId,
-            judge_id: evaluation.judgeId,
+            team_id: teamId,
+            judge_id: judgeId,
             innovation: criteria.innovation,
             technical: criteria.technical,
             presentation: criteria.presentation,
@@ -202,7 +216,7 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
             return;
           }
           
-          toast.error('Failed to submit evaluation');
+          toast.error(`Failed to submit evaluation: ${error.message}`);
           throw new Error(error.message);
         }
         

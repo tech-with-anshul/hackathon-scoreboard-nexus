@@ -28,6 +28,9 @@ export const supabase = createClient<Database>(
         eventsPerSecond: 10,
       },
     },
+    db: {
+      schema: 'public',
+    },
   }
 );
 
@@ -36,15 +39,25 @@ export const testSupabaseConnection = async () => {
   try {
     const { error } = await supabase.from('teams').select('id').limit(1);
     
-    if (error && error.code === 'PGRST301') {
-      // This is a common RLS policy error, indicating the connection works
-      // but the user doesn't have permission (likely not authenticated)
-      return { success: true, error: null };
+    if (error) {
+      if (error.code === 'PGRST301') {
+        // This is a common RLS policy error, indicating the connection works
+        // but the user doesn't have permission (likely not authenticated)
+        return { success: true, error: null };
+      }
+      
+      console.error('Supabase connection test failed with error:', error);
+      return { success: false, error };
     }
     
-    return { success: !error, error };
+    return { success: true, error: null };
   } catch (error) {
-    console.error('Supabase connection test failed:', error);
+    console.error('Supabase connection test failed with exception:', error);
     return { success: false, error };
   }
+};
+
+// Function to validate UUID format
+export const isValidUUID = (id: string) => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 };
