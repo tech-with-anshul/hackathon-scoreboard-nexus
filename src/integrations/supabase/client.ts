@@ -17,6 +17,27 @@ export const supabase = createClient<Database>(
       autoRefreshToken: true,
       persistSession: true,
       storage: localStorage
-    }
+    },
+    global: {
+      headers: {
+        'x-client-info': 'hackathon-judge@1.0.0',
+      },
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
+    },
   }
 );
+
+// Add a function to test the connection
+export const testSupabaseConnection = async () => {
+  try {
+    const { error } = await supabase.from('teams').select('id').limit(1);
+    return { success: !error, error };
+  } catch (error) {
+    console.error('Supabase connection test failed:', error);
+    return { success: false, error };
+  }
+};
