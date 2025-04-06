@@ -63,9 +63,23 @@ const Evaluate = () => {
       return;
     }
     
+    if (!user.id) {
+      const errorMsg = 'User ID is missing';
+      toast.error(errorMsg);
+      setSubmitError(errorMsg);
+      return;
+    }
+    
     // Validate UUIDs before submission
-    if (!isValidUUID(selectedTeam) || !isValidUUID(user.id)) {
-      const errorMsg = 'Invalid team or user ID format';
+    if (!isValidUUID(selectedTeam)) {
+      const errorMsg = `Invalid team ID format: ${selectedTeam}`;
+      toast.error(errorMsg);
+      setSubmitError(errorMsg);
+      return;
+    }
+    
+    if (!isValidUUID(user.id)) {
+      const errorMsg = `Invalid user ID format: ${user.id}`;
       toast.error(errorMsg);
       setSubmitError(errorMsg);
       return;
@@ -103,6 +117,12 @@ const Evaluate = () => {
     }
   };
 
+  useEffect(() => {
+    console.log('Evaluate page mounted');
+    console.log('User:', user);
+    console.log('Teams count:', teams.length);
+  }, [user, teams]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -113,7 +133,7 @@ const Evaluate = () => {
       </div>
       
       {connectionError && (
-        <Alert variant="destructive">
+        <Alert variant="warning">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Connection Error</AlertTitle>
           <AlertDescription>

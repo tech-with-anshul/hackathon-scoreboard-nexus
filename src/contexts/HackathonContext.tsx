@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isValidUUID } from '@/integrations/supabase/client';
 import { useTeams } from '@/hooks/useTeams';
 import { useJudges } from '@/hooks/useJudges';
 import { useEvaluations } from '@/hooks/useEvaluations';
@@ -77,6 +77,25 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Submit evaluation wrapper that includes the connection error state
   const handleSubmitEvaluation = (evaluation: Omit<Evaluation, 'id' | 'timestamp'>) => {
+    // Validate UUIDs before submission
+    if (!evaluation.teamId || !evaluation.judgeId) {
+      const errorMsg = 'Team or judge ID is missing';
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    if (!isValidUUID(evaluation.teamId)) {
+      const errorMsg = `Invalid team ID format: ${evaluation.teamId}`;
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    if (!isValidUUID(evaluation.judgeId)) {
+      const errorMsg = `Invalid judge ID format: ${evaluation.judgeId}`;
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
     return submitEvaluation(evaluation, connectionError);
   };
 
