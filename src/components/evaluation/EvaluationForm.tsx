@@ -46,7 +46,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({
           Rate the team on each criteria (0-20 points each)
         </CardDescription>
         {connectionError && (
-          <Alert variant="destructive" className="mt-2">
+          <Alert variant="warning">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               You're working in offline mode. Your evaluations will be saved locally.
