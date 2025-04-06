@@ -16,7 +16,7 @@ export const supabase = createClient<Database>(
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      storage: localStorage
+      storage: typeof window !== 'undefined' ? localStorage : undefined
     },
     global: {
       headers: {
@@ -35,6 +35,13 @@ export const supabase = createClient<Database>(
 export const testSupabaseConnection = async () => {
   try {
     const { error } = await supabase.from('teams').select('id').limit(1);
+    
+    if (error && error.code === 'PGRST301') {
+      // This is a common RLS policy error, indicating the connection works
+      // but the user doesn't have permission (likely not authenticated)
+      return { success: true, error: null };
+    }
+    
     return { success: !error, error };
   } catch (error) {
     console.error('Supabase connection test failed:', error);

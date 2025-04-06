@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -23,6 +23,7 @@ const Evaluate = () => {
   });
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const judgeId = user?.id || '';
   const judgeEvaluations = getJudgeEvaluations(judgeId);
@@ -32,6 +33,7 @@ const Evaluate = () => {
 
   const handleTeamSelect = (teamId: string) => {
     setSelectedTeam(teamId);
+    setSubmitError(null);
     
     // Check if team has been evaluated and pre-fill the form
     const existingAssessment = judgeEvaluations.find(assessment => assessment.teamId === teamId);
@@ -62,6 +64,7 @@ const Evaluate = () => {
     
     try {
       setIsSubmitting(true);
+      setSubmitError(null);
       
       await submitEvaluation({
         teamId: selectedTeam,
@@ -83,6 +86,7 @@ const Evaluate = () => {
       setNotes('');
     } catch (error) {
       console.error('Submission error:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to submit evaluation');
       // Error is already handled by the submitEvaluation function which shows toast
     } finally {
       setIsSubmitting(false);
@@ -107,6 +111,14 @@ const Evaluate = () => {
           </AlertDescription>
         </Alert>
       )}
+
+      {submitError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Submission Error</AlertTitle>
+          <AlertDescription>{submitError}</AlertDescription>
+        </Alert>
+      )}
       
       <div className="grid gap-6 md:grid-cols-2">
         <TeamList 
@@ -127,6 +139,7 @@ const Evaluate = () => {
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               isUpdate={evaluatedTeamIds.has(selectedTeam)}
+              connectionError={connectionError}
             />
           ) : (
             <Card>

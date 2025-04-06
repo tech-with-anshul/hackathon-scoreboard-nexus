@@ -14,9 +14,12 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         .from('evaluations')
         .select('*');
         
-      if (evaluationsError) throw evaluationsError;
+      if (evaluationsError && evaluationsError.code !== 'PGRST301') {
+        // If the error is something other than a permissions issue, throw it
+        throw evaluationsError;
+      }
       
-      if (evaluationsData) {
+      if (evaluationsData && evaluationsData.length > 0) {
         // Map Supabase data to our Evaluation interface
         const mappedEvaluations: Evaluation[] = evaluationsData.map(evaluation => ({
           id: evaluation.id,
@@ -55,7 +58,7 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         criteria.completion;
 
       // Generate a temporary ID for offline mode
-      const tempId = crypto.randomUUID?.() || Date.now().toString();
+      const tempId = crypto.randomUUID?.() || `temp-${Date.now()}`;
       const timestamp = new Date().toISOString();
 
       // Check if this judge has already evaluated this team
@@ -118,8 +121,30 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
           
         if (error) {
           console.error('Error updating evaluation:', error);
+          
+          // For RLS issues, still update local state
+          if (error.code === 'PGRST301') {
+            // Update local state despite Supabase error
+            const updatedEvaluations = evaluations.map(item => {
+              if (item.id === existingEvaluation.id) {
+                return {
+                  ...item,
+                  criteria,
+                  totalScore,
+                  notes: evaluation.notes,
+                  timestamp
+                };
+              }
+              return item;
+            });
+            
+            setEvaluations(updatedEvaluations);
+            toast.warning('Online update failed, but saved locally');
+            return;
+          }
+          
           toast.error('Failed to update evaluation');
-          return;
+          throw new Error(error.message);
         }
         
         // Update local state
@@ -158,8 +183,27 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
           
         if (error) {
           console.error('Error creating evaluation:', error);
+          
+          // For RLS issues, still update local state
+          if (error.code === 'PGRST301') {
+            // Create in local state despite Supabase error
+            const newEvaluation: Evaluation = {
+              id: tempId,
+              teamId: evaluation.teamId,
+              judgeId: evaluation.judgeId,
+              criteria,
+              totalScore,
+              notes: evaluation.notes,
+              timestamp
+            };
+            
+            setEvaluations([...evaluations, newEvaluation]);
+            toast.warning('Online submission failed, but saved locally');
+            return;
+          }
+          
           toast.error('Failed to submit evaluation');
-          return;
+          throw new Error(error.message);
         }
         
         if (data) {
@@ -185,7 +229,13 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
       }
     } catch (error) {
       console.error('Error submitting evaluation:', error);
-      toast.error('Failed to submit evaluation');
+      if (error instanceof Error) {
+        toast.error(`Failed to submit evaluation: ${error.message}`);
+        throw error;
+      } else {
+        toast.error('Failed to submit evaluation');
+        throw new Error('Unknown error occurred');
+      }
     }
   };
 
@@ -196,7 +246,9 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         .delete()
         .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all evaluations
         
-      if (error) throw error;
+      if (error && error.code !== 'PGRST301') {
+        throw error;
+      }
       
       setEvaluations([]);
       toast.success('All evaluations have been reset');

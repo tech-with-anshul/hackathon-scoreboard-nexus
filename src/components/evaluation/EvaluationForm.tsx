@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface CriteriaType {
   innovation: number;
@@ -21,6 +23,7 @@ interface EvaluationFormProps {
   onSubmit: (e: React.FormEvent) => void;
   isSubmitting: boolean;
   isUpdate: boolean;
+  connectionError?: boolean;
 }
 
 const EvaluationForm: React.FC<EvaluationFormProps> = ({
@@ -30,7 +33,8 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({
   setNotes,
   onSubmit,
   isSubmitting,
-  isUpdate
+  isUpdate,
+  connectionError
 }) => {
   const totalScore = Object.values(criteria).reduce((sum, score) => sum + score, 0);
 
@@ -41,6 +45,14 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({
         <CardDescription>
           Rate the team on each criteria (0-20 points each)
         </CardDescription>
+        {connectionError && (
+          <Alert variant="warning" className="mt-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              You're working in offline mode. Your evaluations will be saved locally.
+            </AlertDescription>
+          </Alert>
+        )}
       </CardHeader>
       <CardContent>
         <form id="evaluationForm" onSubmit={onSubmit} className="space-y-6">
