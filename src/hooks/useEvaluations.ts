@@ -111,12 +111,27 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         return;
       }
 
-      // Prepare the IDs for database
-      const dbTeamId = prepareIdForDatabase(teamId);
-      const dbJudgeId = prepareIdForDatabase(judgeId);
+      // Create database-compatible versions of the IDs
+      let dbTeamId = teamId;
+      let dbJudgeId = judgeId;
+      
+      // Check if we need to generate UUID for testing IDs
+      if (/^\d+$/.test(teamId) || /^t\d+$/.test(teamId)) {
+        // For development/testing IDs, create a deterministic UUID
+        // This ensures we get the same UUID for the same test ID
+        dbTeamId = `00000000-0000-0000-0000-${teamId.padStart(12, '0')}`;
+        console.log(`Converting team ID ${teamId} to UUID format: ${dbTeamId}`);
+      }
+      
+      if (/^\d+$/.test(judgeId) || /^t\d+$/.test(judgeId)) {
+        // For development/testing IDs, create a deterministic UUID
+        dbJudgeId = `00000000-0000-0000-0000-${judgeId.padStart(12, '0')}`;
+        console.log(`Converting judge ID ${judgeId} to UUID format: ${dbJudgeId}`);
+      }
 
       // Update existing evaluation
       if (existingEvaluation) {
+        console.log('Updating existing evaluation', existingEvaluation.id);
         const { error } = await supabase
           .from('evaluations')
           .update({
@@ -174,6 +189,7 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         toast.success('Evaluation updated successfully');
       } else {
         // Create new evaluation
+        console.log('Creating new evaluation with team_id:', dbTeamId, 'judge_id:', dbJudgeId);
         const { data, error } = await supabase
           .from('evaluations')
           .insert({

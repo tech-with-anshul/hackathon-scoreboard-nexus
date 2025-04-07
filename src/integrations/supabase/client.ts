@@ -82,7 +82,15 @@ export const prepareIdForDatabase = (id: string): string => {
     return id;
   }
   
-  // For simple numeric or t-prefixed IDs in development/testing,
-  // we can use them directly in our test environment
+  // For simple numeric or t-prefixed IDs, convert to a deterministic UUID format
+  // This ensures compatibility with PostgreSQL UUID columns
+  if (/^\d+$/.test(id) || /^t\d+$/.test(id)) {
+    const paddedId = id.replace(/^t/, '').padStart(12, '0');
+    return `00000000-0000-0000-0000-${paddedId}`;
+  }
+  
+  // If it's not a standard UUID or simple ID, return as is
+  // This is a fallback, but might cause database errors
+  console.warn(`ID format not recognized: ${id}. This may cause database errors.`);
   return id;
 };
