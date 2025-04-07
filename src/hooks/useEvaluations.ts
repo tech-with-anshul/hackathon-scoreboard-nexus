@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isValidUUID } from '@/integrations/supabase/client';
 import { Evaluation, Team } from '@/types/hackathon';
 
 export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
@@ -9,18 +8,15 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
 
   const loadEvaluations = async () => {
     try {
-      // Fetch evaluations from Supabase
       const { data: evaluationsData, error: evaluationsError } = await supabase
         .from('evaluations')
         .select('*');
         
       if (evaluationsError && evaluationsError.code !== 'PGRST301') {
-        // If the error is something other than a permissions issue, throw it
         throw evaluationsError;
       }
       
       if (evaluationsData && evaluationsData.length > 0) {
-        // Map Supabase data to our Evaluation interface
         const mappedEvaluations: Evaluation[] = evaluationsData.map(evaluation => ({
           id: evaluation.id,
           teamId: evaluation.team_id,
@@ -48,7 +44,6 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
 
   const submitEvaluation = async (evaluation: Omit<Evaluation, 'id' | 'timestamp'>, connectionError: boolean) => {
     try {
-      // Calculate total score
       const { criteria } = evaluation;
       const totalScore = 
         criteria.innovation + 
@@ -57,40 +52,30 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         criteria.impact + 
         criteria.completion;
 
-      // Generate a temporary ID for offline mode
       const tempId = crypto.randomUUID?.() || `temp-${Date.now()}`;
       const timestamp = new Date().toISOString();
 
-      // Ensure teamId and judgeId are valid UUIDs
       const teamId = evaluation.teamId;
       const judgeId = evaluation.judgeId;
       
-      // Import the improved validation function
-      const isValidUUID = (id: string) => {
-        // Accept simple IDs like t1, t2 for testing
-        if (id.startsWith('t') && id.length <= 3) {
-          return true;
-        }
-        
-        // Regular UUID validation
-        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-      };
+      if (!isValidUUID(teamId)) {
+        console.error(`Team ID validation failed: ${teamId}`);
+        toast.error(`Invalid team ID format: ${teamId}`);
+        throw new Error(`Invalid team ID format: ${teamId}`);
+      }
       
-      if (!isValidUUID(teamId) || !isValidUUID(judgeId)) {
-        console.error(`UUID validation failed - teamId: ${teamId}, judgeId: ${judgeId}`);
-        toast.error('Invalid team or judge ID format');
-        throw new Error('Invalid UUID format for team or judge ID');
+      if (!isValidUUID(judgeId)) {
+        console.error(`Judge ID validation failed: ${judgeId}`);
+        toast.error(`Invalid judge ID format: ${judgeId}`);
+        throw new Error(`Invalid judge ID format: ${judgeId}`);
       }
 
-      // Check if this judge has already evaluated this team
       const existingEvaluation = evaluations.find(
         (assessment) => assessment.teamId === evaluation.teamId && assessment.judgeId === evaluation.judgeId
       );
 
       if (connectionError) {
-        // Handle offline mode - just update local state
         if (existingEvaluation) {
-          // Update existing evaluation in local state
           const updatedEvaluations = evaluations.map(item => {
             if (item.id === existingEvaluation.id) {
               return {
@@ -106,7 +91,6 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
           
           setEvaluations(updatedEvaluations);
         } else {
-          // Create new evaluation in local state
           const newEvaluation: Evaluation = {
             id: tempId,
             teamId: evaluation.teamId,
@@ -125,7 +109,6 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
       }
 
       if (existingEvaluation) {
-        // Update existing evaluation
         const { error } = await supabase
           .from('evaluations')
           .update({
@@ -143,9 +126,7 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         if (error) {
           console.error('Error updating evaluation:', error);
           
-          // For RLS issues, still update local state
           if (error.code === 'PGRST301') {
-            // Update local state despite Supabase error
             const updatedEvaluations = evaluations.map(item => {
               if (item.id === existingEvaluation.id) {
                 return {
@@ -168,7 +149,6 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
           throw new Error(error.message);
         }
         
-        // Update local state
         const updatedEvaluations = evaluations.map(item => {
           if (item.id === existingEvaluation.id) {
             return {
@@ -185,7 +165,6 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         setEvaluations(updatedEvaluations);
         toast.success('Evaluation updated successfully');
       } else {
-        // Create new evaluation
         const { data, error } = await supabase
           .from('evaluations')
           .insert({
@@ -205,9 +184,7 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         if (error) {
           console.error('Error creating evaluation:', error);
           
-          // For RLS issues, still update local state
           if (error.code === 'PGRST301') {
-            // Create in local state despite Supabase error
             const newEvaluation: Evaluation = {
               id: tempId,
               teamId: evaluation.teamId,
@@ -265,7 +242,7 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
       const { error } = await supabase
         .from('evaluations')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all evaluations
+        .neq('id', '00000000-0000-0000-0000-000000000000');
         
       if (error && error.code !== 'PGRST301') {
         throw error;

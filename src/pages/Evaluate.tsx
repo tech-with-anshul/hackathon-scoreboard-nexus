@@ -70,7 +70,7 @@ const Evaluate = () => {
       return;
     }
     
-    // Validate UUIDs before submission
+    // Using our improved validation function
     if (!isValidUUID(selectedTeam)) {
       const errorMsg = `Invalid team ID format: ${selectedTeam}`;
       toast.error(errorMsg);
