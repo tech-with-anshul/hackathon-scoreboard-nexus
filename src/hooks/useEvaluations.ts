@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { supabase, isValidUUID } from '@/integrations/supabase/client';
+import { supabase, isValidUUID, prepareIdForDatabase } from '@/integrations/supabase/client';
 import { Evaluation, Team } from '@/types/hackathon';
 
 export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
@@ -58,6 +59,7 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
       const teamId = evaluation.teamId;
       const judgeId = evaluation.judgeId;
       
+      // Validate the IDs
       if (!isValidUUID(teamId)) {
         console.error(`Team ID validation failed: ${teamId}`);
         toast.error(`Invalid team ID format: ${teamId}`);
@@ -74,6 +76,7 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         (assessment) => assessment.teamId === evaluation.teamId && assessment.judgeId === evaluation.judgeId
       );
 
+      // Handle offline mode
       if (connectionError) {
         if (existingEvaluation) {
           const updatedEvaluations = evaluations.map(item => {
@@ -108,6 +111,11 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         return;
       }
 
+      // Prepare the IDs for database
+      const dbTeamId = prepareIdForDatabase(teamId);
+      const dbJudgeId = prepareIdForDatabase(judgeId);
+
+      // Update existing evaluation
       if (existingEvaluation) {
         const { error } = await supabase
           .from('evaluations')
@@ -145,7 +153,7 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
             return;
           }
           
-          toast.error('Failed to update evaluation');
+          toast.error(`Failed to update evaluation: ${error.message}`);
           throw new Error(error.message);
         }
         
@@ -165,11 +173,12 @@ export const useEvaluations = (initialEvaluations: Evaluation[] = []) => {
         setEvaluations(updatedEvaluations);
         toast.success('Evaluation updated successfully');
       } else {
+        // Create new evaluation
         const { data, error } = await supabase
           .from('evaluations')
           .insert({
-            team_id: teamId,
-            judge_id: judgeId,
+            team_id: dbTeamId,
+            judge_id: dbJudgeId,
             innovation: criteria.innovation,
             technical: criteria.technical,
             presentation: criteria.presentation,

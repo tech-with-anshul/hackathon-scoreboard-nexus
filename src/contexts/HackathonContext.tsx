@@ -1,6 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { supabase, isValidUUID } from '@/integrations/supabase/client';
+import { supabase, isValidUUID, prepareIdForDatabase } from '@/integrations/supabase/client';
 import { useTeams } from '@/hooks/useTeams';
 import { useJudges } from '@/hooks/useJudges';
 import { useEvaluations } from '@/hooks/useEvaluations';
