@@ -25,11 +25,11 @@ const App = () => {
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
           <BrowserRouter>
             <AuthProvider>
               <HackathonProvider>
+                <Toaster />
+                <Sonner />
                 <Routes>
                   <Route path="/" element={<Login />} />
                   
