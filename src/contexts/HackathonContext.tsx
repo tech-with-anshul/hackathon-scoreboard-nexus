@@ -77,20 +77,23 @@ export const HackathonProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Submit evaluation wrapper that includes the connection error state
   const handleSubmitEvaluation = (evaluation: Omit<Evaluation, 'id' | 'timestamp'>) => {
-    // Validate UUIDs before submission
+    // Validate that team and judge IDs are present
     if (!evaluation.teamId || !evaluation.judgeId) {
       const errorMsg = 'Team or judge ID is missing';
       toast.error(errorMsg);
       throw new Error(errorMsg);
     }
     
+    // Using our improved validation function
     if (!isValidUUID(evaluation.teamId)) {
+      console.error(`Team ID validation failed: ${evaluation.teamId}`);
       const errorMsg = `Invalid team ID format: ${evaluation.teamId}`;
       toast.error(errorMsg);
       throw new Error(errorMsg);
     }
     
     if (!isValidUUID(evaluation.judgeId)) {
+      console.error(`Judge ID validation failed: ${evaluation.judgeId}`);
       const errorMsg = `Invalid judge ID format: ${evaluation.judgeId}`;
       toast.error(errorMsg);
       throw new Error(errorMsg);
